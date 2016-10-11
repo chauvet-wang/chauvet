@@ -1,0 +1,86 @@
+两台tomcat的conf下context.xml文件修改如下：
+
+<?xml version='1.0' encoding='utf-8'?>
+<Context>
+ 
+    <!-- Default set of monitored resources -->
+    <WatchedResource>WEB-INF/web.xml</WatchedResource>
+ 
+    <!-- Uncomment this to disable session persistence across Tomcat restarts -->
+    <!--
+    <Manager pathname="" />
+    -->
+ 
+    <!-- Uncomment this to enable Comet connection tacking (provides events
+         on session expiration as well as webapp lifecycle) -->
+    <!--
+    <Valve className="org.apache.catalina.valves.CometConnectionManagerValve" />
+    -->
+ 
+    <Valve className="com.orangefunction.tomcat.redissessions.RedisSessionHandlerValve" />
+      <Manager className="com.orangefunction.tomcat.redissessions.RedisSessionManager"
+           host="localhost"
+           port="6379"
+           database="0"
+           maxInactiveInterval="60" />
+ 
+</Context>
+我们还需要给nginx配置文件中增加轮询机制，配置文件如下：
+
+
+upstream site { 
+    server localhost:8080;
+    server localhost:9080;
+}
+ 
+ 
+server {
+    listen       80 default_server;
+    server_name 你的域名;
+ 
+ 
+    location / {
+        index  index_tel.jsp index.jsp index.html index.htm ; 
+        proxy_redirect          off;   
+        proxy_set_header        Host            $host;   
+        proxy_set_header        X-Real-IP       $remote_addr;   
+        proxy_set_header        X-Forwarded-For $proxy_add_x_forwarded_for;   
+        client_max_body_size    10m;   
+        client_body_buffer_size 128k;   
+        proxy_buffers           32 4k; 
+        proxy_connect_timeout   3;   
+        proxy_send_timeout      30;   
+        proxy_read_timeout      30;  
+        proxy_pass http://site;
+    }
+}
+
+ 最后我们进行测试，往tomcat1 ROOT下放个a.jsp：
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>测试session同步</title>
+</head>
+<body>
+这是tomcat 8080，当前sessionId：<%=session.getId()%>
+<%
+  session.setAttribute("name","我的博客");
+%>
+</body>
+</html>
+
+ 往tomcat1 ROOT下放个a.jsp,但内容不同：
+<%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<html>
+<head>
+    <title>测试session同步</title>
+</head>
+<body>
+这是tomcat 8090，当前sessionId：<%=session.getId()%>
+ 
+从session中取name：
+<%=session.getAttribute("name")%>
+</body>
+</html>
+
+ 最后我们重启两个tomcat，nginx。然后访问http://你的域名/a.jsp,会看到会切换到不同的tomcat下，但是sessionid相同，并且都可以在session中取到name这个属性的值。

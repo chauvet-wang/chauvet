@@ -1,0 +1,70 @@
+Spring PropertyPlaceholderConfigurer占位符用法
+
+1、PropertyPlaceholderConfigurer是一个bean工厂后置处理器的实现，也就是BeanFactoryPostProcessor接口的一个实现。PropertyPlaceholderConfigurer可以将上下文(配置文件)中的属性值放在另一个单独的标准java Properties文件中去。在XML文件中用${key}替换指定的properties文件中的值。这样的话，只需要对properties文件进行修改，而不用对xml配置文件进行修改。
+
+2、在Spring中，使用PropertyPlaceholderConfigurer可以在XML配置文件中加入外部属性文件，当然也可以指定外部文件的编码，如：
+复制代码
+
+<bean id="propertyConfigurer"class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+    <property name="location">
+        <value>resource/jdbc.properties</value>
+    </property>
+    <property name="fileEncoding">
+        <value>UTF-8</value>
+    </property>
+</bean>
+
+复制代码
+
+当然也可以引入多个属性文件，如：
+复制代码
+
+<bean id="propertyConfigurer"class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+    <property name="locations">
+        <list>
+            <value>/WEB-INF/AppConfig.xml</value>  
+            <value>classpath: resource/jdbc.properties</value>//注意这两种value值的写法
+        </list>
+    </property>
+</bean>
+
+复制代码
+
+3、譬如，jdbc.properties的内容为：
+
+jdbc.driverClassName=com.mysql.jdbc.Driver
+jdbc.url=jdbc:mysql://localhost:3306/myspring?useUnicode=true&characterEncoding=UTF-8
+jdbc.username=root
+jdbc.password=123456
+
+4、那么在Spring配置文件中，我们就可以这样写：
+复制代码
+
+<bean class="org.springframework.beans.factory.config.PropertyPlaceholderConfigurer">
+    <property name="locations">
+    <value>classpath:jdbc.properties</value>
+    </property>
+</bean>
+    
+<bean id="dataSource" destroy-method="close" class="org.apache.commons.dbcp.BasicDataSource">
+    <property name="driverClassName" value="${jdbc.driverClassName}"/>
+    <property name="url" value="${jdbc.url}"/>
+    <property name="username" value="${jdbc.username}"/>
+    <property name="password" value="${jdbc.password}"/>
+    <property name="removeAbandoned" value="true" />
+    <property name="removeAbandonedTimeout" value="20"/>
+    <property name="logAbandoned" value="true"/>
+</bean>
+
+复制代码
+
+5、这样，一个简单的数据源就设置完毕了。可以看出：PropertyPlaceholderConfigurer起的作用就是将占位符指向的数据库配置信息放在bean中定义的工具。
+
+6、查看源代码，可以发现，locations属性定义在PropertyPlaceholderConfigurer的祖父类PropertiesLoaderSupport中，而location只有setter方法。类似于这样的配置，在spring的源程序中很常见的。
+
+PropertyPlaceholderConfigurer如果在指定的Properties文件中找不到你想使用的属性，它还会在Java的System类属性中查找。
+我们可以通过System.setProperty(key, value)或者java中通过-Dnamevalue来给Spring配置文件传递参数。
+
+7、我们还可以使用注解的方式实现，如：<context:property-placeholder location="classpath:jdbc.properties" />，效果跟PropertyPlaceholderConfigurer是一样的。
+
+---------------------------------------------------------------------------------
