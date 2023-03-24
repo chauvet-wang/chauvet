@@ -42,7 +42,7 @@
         <!-- mysql 版本 -->
         <mysql.version>8.0.28</mysql.version>
         <!-- lombok 版本 -->
-        <lombok.version>1.18.20</lombok.version>
+        <lombok.version>1.18.26</lombok.version>
         <!-- redis 版本 -->
         <redis.verion>2.1.6.RELEASE</redis.verion>
         <!-- fastjson 版本 -->
